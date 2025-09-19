@@ -4,6 +4,27 @@
 */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import ErrorBoundary from './components/ErrorBoundary';
 import Notification from './components/Notification';
 import { useErrorHandler } from './hooks/useErrorHandler';
@@ -20,6 +41,8 @@ interface SavedItem {
   dateAdded: number;
   watched: boolean;
   type: 'video' | 'playlist';
+  order: number; // For drag-and-drop reordering
+  tags: string[]; // Array of tag strings
 }
 
 type Theme = 'light' | 'dark';
@@ -71,6 +94,15 @@ const CheckIcon = () => (
 const OpenNewTabIcon = () => (
     <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"></path></svg>
 );
+const DragHandleIcon = () => (
+    <svg viewBox="0 0 24 24"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+);
+const AddIcon = () => (
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+);
+const MoreIcon = () => (
+    <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+);
 
 // Formats a timestamp into a relative date string
 const formatDateGroup = (timestamp: number) => {
@@ -88,9 +120,81 @@ const formatDateGroup = (timestamp: number) => {
     });
 };
 
+// Sortable Video Item Component
+interface SortableVideoItemProps {
+  item: SavedItem;
+  onToggleWatched: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+const SortableVideoItem = ({ item, onToggleWatched, onDelete }: SortableVideoItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`video-item-wrapper ${item.watched ? 'watched' : ''} ${isDragging ? 'dragging' : ''}`}
+    >
+      <button className="watched-toggle" onClick={() => onToggleWatched(item.id)} aria-label={item.watched ? 'Mark as unwatched' : 'Mark as watched'}>
+        <CheckIcon />
+      </button>
+      
+      <div className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
+        <DragHandleIcon />
+      </div>
+      
+      <a href={item.url} target="_blank" rel="noopener noreferrer" className="video-item-link">
+        <div className="video-item">
+          {item.thumbnail && item.thumbnail !== 'placeholder' ? (
+            <img src={item.thumbnail} alt={`Thumbnail for ${item.title}`} className="thumbnail" />
+          ) : (
+            <div className="playlist-placeholder">
+              <PlaylistIcon />
+            </div>
+          )}
+          <div className="video-info">
+            <h3 className="video-title" title={item.title}>{item.title}</h3>
+            <div className="video-meta">
+              <div className="video-source">
+                {item.type === 'playlist' ? <PlaylistIcon /> : <YouTubeIcon />}
+                <span>YouTube {item.type}</span>
+              </div>
+              {item.tags.length > 0 && (
+                <div className="video-tag">
+                  {item.tags[0]}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="video-actions">
+            <span className="action-icon" title="Open in new tab"><OpenNewTabIcon /></span>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); }} className="action-icon delete-btn" aria-label="Delete item" title="Delete"><DeleteIcon /></button>
+          </div>
+        </div>
+      </a>
+    </div>
+  );
+};
+
 function App() {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [newUrl, setNewUrl] = useState('');
+  const [newTag, setNewTag] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
   const [theme, setTheme] = useState<Theme>('light');
   const [isLoaded, setIsLoaded] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -101,14 +205,40 @@ function App() {
     type: 'success' | 'error' | 'warning' | 'info';
     message: string;
   }>({ show: false, type: 'info', message: '' });
+  const [activeId, setActiveId] = useState<number | null>(null);
 
   const { error, setError, clearError, handleAsyncError } = useErrorHandler();
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Migration function to add order and tags properties to existing items
+  const migrateItems = (items: SavedItem[]): SavedItem[] => {
+    return items.map((item, index) => ({
+      ...item,
+      order: item.order !== undefined ? item.order : index,
+      tags: item.tags || [], // Default to empty tags array
+    }));
+  };
 
   // Load data from chrome.storage.local on component mount
   useEffect(() => {
     if (chrome && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['youtubeLinks', 'theme', 'sortBy'], (result) => {
-        if (result.youtubeLinks) setItems(result.youtubeLinks);
+        if (result.youtubeLinks) {
+          const migratedItems = migrateItems(result.youtubeLinks);
+          setItems(migratedItems);
+        }
+        
         const savedTheme = result.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         setTheme(savedTheme);
         if(result.sortBy) setSortBy(result.sortBy);
@@ -125,7 +255,11 @@ function App() {
   useEffect(() => {
     document.body.className = theme;
     if (isLoaded && chrome && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ theme, youtubeLinks: items, sortBy });
+        chrome.storage.local.set({ 
+          theme, 
+          youtubeLinks: items, 
+          sortBy 
+        });
     }
   }, [theme, items, sortBy, isLoaded]);
 
@@ -171,12 +305,15 @@ function App() {
         dateAdded: Date.now(),
         watched: false,
         type: playlistId ? 'playlist' : 'video',
+        order: items.filter(item => item.tags.includes(newTag)).length, // Order within the tag
+        tags: newTag ? [newTag] : [], // Single tag
       };
 
       setItems([newItem, ...items]);
       setNewUrl('');
+      setNewTag(''); // Clear tag after saving
       setSaveState('success');
-      showNotification('success', 'Video saved successfully!');
+      showNotification('success', `Video saved to "${newTag}" tag!`);
 
       setTimeout(() => {
           setSaveState('idle');
@@ -203,6 +340,65 @@ function App() {
       setTheme(theme === 'light' ? 'dark' : 'light');
   }
 
+  // Get all unique tags from items
+  const getAllTags = (): string[] => {
+    const allTags = items.flatMap(item => item.tags);
+    return Array.from(new Set(allTags)).sort();
+  };
+
+  // Tag management functions
+  const addTag = (tag: string) => {
+    if (tag.trim()) {
+      setNewTag(tag.trim());
+    }
+  };
+
+  const switchToTag = (tag: string) => {
+    console.log('switchToTag called with:', tag);
+    setSelectedTag(tag);
+    setSearchQuery(''); // Clear search when switching tags
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as number);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (over && active.id !== over.id) {
+      setItems((items) => {
+        const draggedItem = items.find(item => item.id === active.id);
+        const targetItem = items.find(item => item.id === over.id);
+        
+        if (!draggedItem || !targetItem) return items;
+
+        // Only allow reordering within the same tag
+        if (selectedTag !== 'all' && draggedItem.tags[0] !== targetItem.tags[0]) {
+          return items; // Don't allow cross-tag reordering
+        }
+
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Update order property for items in the same tag
+        const tagToUpdate = selectedTag === 'all' ? draggedItem.tags[0] : selectedTag;
+        return newItems.map((item, index) => {
+          if (item.tags.includes(tagToUpdate)) {
+            const tagItems = newItems.filter(i => i.tags.includes(tagToUpdate));
+            const tagOrder = tagItems.findIndex(tagItem => tagItem.id === item.id);
+            return { ...item, order: tagOrder };
+          }
+          return item;
+        });
+      });
+    }
+  };
+
   const getButtonContent = () => {
       switch (saveState) {
           case 'loading': return <SpinnerIcon />;
@@ -212,9 +408,19 @@ function App() {
   };
 
   const processedItems = useMemo(() => {
-    const filtered = items.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // First filter by selected tag
+    const tagFiltered = selectedTag === 'all' 
+      ? items 
+      : items.filter(item => item.tags.includes(selectedTag));
+    
+    // Then filter by search query
+    const filtered = tagFiltered.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTags = searchQuery === '' || item.tags.some(tag => 
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return matchesSearch || matchesTags;
+    });
 
     const sorted = [...filtered].sort((a, b) => {
         switch (sortBy) {
@@ -222,7 +428,7 @@ function App() {
             case 'title-asc': return a.title.localeCompare(b.title);
             case 'title-desc': return b.title.localeCompare(a.title);
             case 'date-desc':
-            default: return b.dateAdded - a.dateAdded;
+            default: return a.order - b.order; // Use order for custom arrangement
         }
     });
 
@@ -233,7 +439,7 @@ function App() {
         return acc;
     }, {} as Record<string, SavedItem[]>);
 
-  }, [items, searchQuery, sortBy]);
+  }, [items, searchQuery, sortBy, selectedTag]);
 
   const dateGroups = Object.keys(processedItems);
 
@@ -247,9 +453,53 @@ function App() {
           </button>
         </header>
         <main>
+          {/* Tag Navigation */}
+          <div className="tag-navigation">
+            <button 
+              className={`tag-nav-item ${selectedTag === 'all' ? 'active' : ''}`}
+              onClick={() => switchToTag('all')}
+            >
+              All Videos ({items.length})
+            </button>
+            {getAllTags().map(tag => (
+              <button
+                key={tag}
+                className={`tag-nav-item ${selectedTag === tag ? 'active' : ''}`}
+                onClick={() => {
+                  console.log('Clicked tag button:', tag);
+                  switchToTag(tag);
+                }}
+              >
+                {tag} ({items.filter(item => item.tags.includes(tag)).length})
+              </button>
+            ))}
+          </div>
+
+          {/* Add Video Form */}
           <form className="input-form" onSubmit={(e) => { e.preventDefault(); handleSaveItem(); }}>
-            <input type="text" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="Paste YouTube URL here" aria-label="YouTube URL Input" disabled={saveState !== 'idle'}/>
-            <button type="submit" disabled={saveState !== 'idle'} className={saveState}>{getButtonContent()}</button>
+            <div className="form-row">
+              <input 
+                type="text" 
+                value={newUrl} 
+                onChange={(e) => setNewUrl(e.target.value)} 
+                placeholder="Paste YouTube URL here" 
+                aria-label="YouTube URL Input" 
+                disabled={saveState !== 'idle'}
+                className="url-input"
+              />
+              <input 
+                type="text" 
+                value={newTag} 
+                onChange={(e) => setNewTag(e.target.value)} 
+                placeholder="Tag name" 
+                aria-label="Tag Input" 
+                disabled={saveState !== 'idle'}
+                className="tag-input"
+              />
+              <button type="submit" disabled={saveState !== 'idle'} className={`save-btn ${saveState}`}>
+                {getButtonContent()}
+              </button>
+            </div>
           </form>
           
           {error.hasError && (
@@ -270,48 +520,61 @@ function App() {
               </div>
           )}
 
-          <div className="video-list" aria-live="polite">
-              {dateGroups.length > 0 ? (
-                  dateGroups.map(date => (
-                      <section key={date} className="date-group">
-                          <h2 className="date-group-header">{date}</h2>
-                          {processedItems[date].map(item => (
-                               <div key={item.id} className={`video-item-wrapper ${item.watched ? 'watched' : ''}`}>
-                                  <button className="watched-toggle" onClick={() => handleToggleWatched(item.id)} aria-label={item.watched ? 'Mark as unwatched' : 'Mark as watched'}>
-                                      <CheckIcon />
-                                  </button>
-                                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="video-item-link">
-                                      <div className="video-item">
-                                          {item.thumbnail && item.thumbnail !== 'placeholder' ? (
-                                              <img src={item.thumbnail} alt={`Thumbnail for ${item.title}`} className="thumbnail" />
-                                          ) : (
-                                              <div className="playlist-placeholder">
-                                                  <PlaylistIcon />
-                                              </div>
-                                          )}
-                                          <div className="video-info">
-                                              <h3 className="video-title" title={item.title}>{item.title}</h3>
-                                              <div className="video-source">
-                                                  {item.type === 'playlist' ? <PlaylistIcon /> : <YouTubeIcon />}
-                                                  <span>YouTube {item.type}</span>
-                                              </div>
-                                          </div>
-                                          <div className="video-actions">
-                                              <span className="action-icon" title="Open in new tab"><OpenNewTabIcon /></span>
-                                              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteItem(item.id); }} className="action-icon delete-btn" aria-label="Delete item" title="Delete"><DeleteIcon /></button>
-                                          </div>
-                                      </div>
-                                  </a>
-                              </div>
-                          ))}
-                      </section>
-                  ))
-              ) : items.length > 0 && searchQuery ? (
-                  <div className="empty-state"><EmptyIcon /><p>No videos match your search.</p></div>
-              ) : (
-                  <div className="empty-state"><EmptyIcon /><p>No videos saved yet.</p><p>Paste a link above to get started!</p></div>
-              )}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="video-list" aria-live="polite">
+                {dateGroups.length > 0 ? (
+                    dateGroups.map(date => (
+                        <section key={date} className="date-group">
+                            <h2 className="date-group-header">{date}</h2>
+                            <SortableContext items={processedItems[date].map(item => item.id)} strategy={verticalListSortingStrategy}>
+                                {processedItems[date].map(item => (
+                                    <SortableVideoItem
+                                        key={item.id}
+                                        item={item}
+                                        onToggleWatched={handleToggleWatched}
+                                        onDelete={handleDeleteItem}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </section>
+                    ))
+                ) : items.length > 0 && searchQuery ? (
+                    <div className="empty-state"><EmptyIcon /><p>No videos match your search.</p></div>
+                ) : (
+                    <div className="empty-state"><EmptyIcon /><p>No videos saved yet.</p><p>Paste a link above to get started!</p></div>
+                )}
+            </div>
+            
+            <DragOverlay>
+              {activeId ? (
+                <div className="video-item-wrapper dragging-overlay">
+                  <button className="watched-toggle" aria-label="Mark as watched">
+                    <CheckIcon />
+                  </button>
+                  <div className="drag-handle">
+                    <DragHandleIcon />
+                  </div>
+                  <div className="video-item">
+                    <div className="playlist-placeholder">
+                      <PlaylistIcon />
+                    </div>
+                    <div className="video-info">
+                      <h3 className="video-title">Dragging...</h3>
+                      <div className="video-source">
+                        <YouTubeIcon />
+                        <span>YouTube video</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </main>
         
         <Notification

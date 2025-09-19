@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YT Queue",
-  "version": "0.0.1",
-  "description": "Save and manage YouTube videos & playlists to watch later.",
+  "version": "0.1.0",
+  "description": "Save and manage YouTube videos & playlists to watch later. Now with drag-and-drop reordering and tagging system!",
   "action": {
     "default_popup": "index.html",
     "default_title": "YT Queue"

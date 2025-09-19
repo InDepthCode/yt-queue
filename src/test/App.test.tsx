@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 
@@ -25,6 +25,8 @@ const mockChrome = {
 global.chrome = mockChrome;
 
 describe('App Component', () => {
+  const user = userEvent.setup();
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockChrome.storage.local.get.mockImplementation((keys, callback) => {
@@ -48,7 +50,6 @@ describe('App Component', () => {
   });
 
   it('toggles theme when theme button is clicked', async () => {
-    const user = userEvent.setup();
     render(<App />);
     
     const themeButton = screen.getByRole('button', { name: /switch to dark mode/i });
@@ -58,7 +59,6 @@ describe('App Component', () => {
   });
 
   it('validates URL input before saving', async () => {
-    const user = userEvent.setup();
     render(<App />);
     
     const input = screen.getByPlaceholderText('Paste YouTube URL here');
@@ -75,7 +75,6 @@ describe('App Component', () => {
   });
 
   it('saves a valid YouTube video URL', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     // Mock successful API response
@@ -103,7 +102,6 @@ describe('App Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     // Mock API error
@@ -123,7 +121,6 @@ describe('App Component', () => {
   });
 
   it('searches videos by title', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     // Mock API response
@@ -163,7 +160,6 @@ describe('App Component', () => {
   });
 
   it('sorts videos correctly', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     // Mock API responses for multiple videos
@@ -185,7 +181,7 @@ describe('App Component', () => {
     const input = screen.getByPlaceholderText('Paste YouTube URL here');
     const saveButton = screen.getByRole('button', { name: /save/i });
     
-    await user.type(input, 'https://www.youtube.com/watch?v=video1');
+    await user.type(input, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     await user.click(saveButton);
     
     await waitFor(() => {
@@ -193,7 +189,7 @@ describe('App Component', () => {
     });
     
     // Add second video
-    await user.type(input, 'https://www.youtube.com/watch?v=video2');
+    await user.type(input, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     await user.click(saveButton);
     
     await waitFor(() => {
@@ -210,7 +206,6 @@ describe('App Component', () => {
   });
 
   it('toggles watched status', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     vi.mocked(apiService.fetchVideoData).mockResolvedValue({
@@ -243,7 +238,6 @@ describe('App Component', () => {
   });
 
   it('deletes videos', async () => {
-    const user = userEvent.setup();
     const { apiService } = await import('../services/apiService');
     
     vi.mocked(apiService.fetchVideoData).mockResolvedValue({
@@ -274,5 +268,425 @@ describe('App Component', () => {
     
     expect(screen.queryByText('Test Video')).not.toBeInTheDocument();
     expect(screen.getByText('No videos saved yet.')).toBeInTheDocument();
+  });
+
+  describe('Tag Filtering Functionality', () => {
+    beforeEach(() => {
+      // Mock items with different tags
+      const mockItems = [
+        {
+          id: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          title: 'Video 1',
+          thumbnail: 'thumb1.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 0,
+          tags: ['music']
+        },
+        {
+          id: 2,
+          url: 'https://www.youtube.com/watch?v=2',
+          title: 'Video 2',
+          thumbnail: 'thumb2.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 1,
+          tags: ['tutorial']
+        },
+        {
+          id: 3,
+          url: 'https://www.youtube.com/watch?v=3',
+          title: 'Video 3',
+          thumbnail: 'thumb3.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 2,
+          tags: ['music']
+        }
+      ];
+
+      mockChrome.storage.local.get.mockImplementation((keys, callback) => {
+        callback({
+          youtubeLinks: mockItems,
+          theme: 'light',
+          sortBy: 'date-desc'
+        });
+      });
+    });
+
+    it('should display all videos when "All Videos" is selected', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+        expect(screen.getByText('Video 2')).toBeInTheDocument();
+        expect(screen.getByText('Video 3')).toBeInTheDocument();
+      });
+
+      // Check that "All Videos" tab is active
+      const allVideosTab = screen.getByText('All Videos (3)');
+      expect(allVideosTab).toHaveClass('active');
+    });
+
+    it('should filter videos by selected tag', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+      });
+
+      // Click on music tag
+      const musicTab = screen.getByText('music (2)');
+      await user.click(musicTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+        expect(screen.getByText('Video 3')).toBeInTheDocument();
+        expect(screen.queryByText('Video 2')).not.toBeInTheDocument();
+      });
+
+      // Check that music tab is active
+      expect(musicTab).toHaveClass('active');
+    });
+
+    it('should filter videos by tutorial tag', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Video 2')).toBeInTheDocument();
+      });
+
+      // Click on tutorial tag
+      const tutorialTab = screen.getByText('tutorial (1)');
+      await user.click(tutorialTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Video 2')).toBeInTheDocument();
+        expect(screen.queryByText('Video 1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Video 3')).not.toBeInTheDocument();
+      });
+
+      // Check that tutorial tab is active
+      expect(tutorialTab).toHaveClass('active');
+    });
+
+    it('should show correct video counts in tag tabs', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('All Videos (3)')).toBeInTheDocument();
+        expect(screen.getByText('music (2)')).toBeInTheDocument();
+        expect(screen.getByText('tutorial (1)')).toBeInTheDocument();
+      });
+    });
+
+    it('should clear search when switching tags', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+      });
+
+      // Search for a video
+      const searchInput = screen.getByPlaceholderText('Search by title...');
+      await user.type(searchInput, 'Video 1');
+
+      await waitFor(() => {
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+        expect(screen.queryByText('Video 2')).not.toBeInTheDocument();
+      });
+
+      // Switch to music tag
+      const musicTab = screen.getByText('music (2)');
+      await user.click(musicTab);
+
+      // Search should be cleared and all music videos should be visible
+      await waitFor(() => {
+        expect(searchInput).toHaveValue('');
+        expect(screen.getByText('Video 1')).toBeInTheDocument();
+        expect(screen.getByText('Video 3')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Video Adding with Tags', () => {
+    it('should add video with tag', async () => {
+      const { apiService } = await import('../services/apiService');
+      apiService.fetchVideoData.mockResolvedValue({
+        success: true,
+        data: { title: 'New Video', thumbnailUrl: 'thumb.jpg' },
+        source: 'primary'
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('No videos saved yet.')).toBeInTheDocument();
+      });
+
+      // Add URL
+      const urlInput = screen.getByPlaceholderText('Paste YouTube URL here');
+      await user.type(urlInput, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      // Add tag
+      const tagInput = screen.getByPlaceholderText('Tag name');
+      await user.type(tagInput, 'test-tag');
+
+      // Submit form
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Video saved to "test-tag" tag!')).toBeInTheDocument();
+        expect(screen.getByText('New Video')).toBeInTheDocument();
+        expect(screen.getByText('test-tag')).toBeInTheDocument();
+      });
+
+      // Check that tag tab appears
+      expect(screen.getByText('test-tag (1)')).toBeInTheDocument();
+    });
+
+    it('should add video without tag (empty tags array)', async () => {
+      const { apiService } = await import('../services/apiService');
+      apiService.fetchVideoData.mockResolvedValue({
+        success: true,
+        data: { title: 'Untagged Video', thumbnailUrl: 'thumb.jpg' },
+        source: 'primary'
+      });
+
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('No videos saved yet.')).toBeInTheDocument();
+      });
+
+      // Add URL only (no tag)
+      const urlInput = screen.getByPlaceholderText('Paste YouTube URL here');
+      await user.type(urlInput, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+      // Submit form
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Video saved to "" tag!')).toBeInTheDocument();
+        expect(screen.getByText('Untagged Video')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Drag and Drop Functionality', () => {
+    beforeEach(() => {
+      // Mock items for drag and drop testing
+      const mockItems = [
+        {
+          id: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          title: 'First Video',
+          thumbnail: 'thumb1.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 0,
+          tags: ['music']
+        },
+        {
+          id: 2,
+          url: 'https://www.youtube.com/watch?v=2',
+          title: 'Second Video',
+          thumbnail: 'thumb2.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 1,
+          tags: ['music']
+        },
+        {
+          id: 3,
+          url: 'https://www.youtube.com/watch?v=3',
+          title: 'Third Video',
+          thumbnail: 'thumb3.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 2,
+          tags: ['tutorial']
+        }
+      ];
+
+      mockChrome.storage.local.get.mockImplementation((keys, callback) => {
+        callback({
+          youtubeLinks: mockItems,
+          theme: 'light',
+          sortBy: 'date-desc'
+        });
+      });
+    });
+
+    it('should render drag handles for videos', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('First Video')).toBeInTheDocument();
+      });
+
+      // Check that drag handles are present
+      const dragHandles = screen.getAllByLabelText('Drag to reorder');
+      expect(dragHandles).toHaveLength(3);
+    });
+
+    it('should allow reordering within the same tag', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('First Video')).toBeInTheDocument();
+      });
+
+      // Switch to music tag to test reordering within same tag
+      const musicTab = screen.getByText('music (2)');
+      await user.click(musicTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('First Video')).toBeInTheDocument();
+        expect(screen.getByText('Second Video')).toBeInTheDocument();
+        expect(screen.queryByText('Third Video')).not.toBeInTheDocument();
+      });
+
+      // Get drag handles for music videos
+      const dragHandles = screen.getAllByLabelText('Drag to reorder');
+      expect(dragHandles).toHaveLength(2);
+    });
+
+    it('should not allow cross-tag reordering', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('First Video')).toBeInTheDocument();
+      });
+
+      // Switch to music tag
+      const musicTab = screen.getByText('music (2)');
+      await user.click(musicTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('First Video')).toBeInTheDocument();
+        expect(screen.getByText('Second Video')).toBeInTheDocument();
+      });
+
+      // Switch to tutorial tag
+      const tutorialTab = screen.getByText('tutorial (1)');
+      await user.click(tutorialTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Third Video')).toBeInTheDocument();
+        expect(screen.queryByText('First Video')).not.toBeInTheDocument();
+        expect(screen.queryByText('Second Video')).not.toBeInTheDocument();
+      });
+
+      // Only one drag handle should be present for tutorial tag
+      const dragHandles = screen.getAllByLabelText('Drag to reorder');
+      expect(dragHandles).toHaveLength(1);
+    });
+  });
+
+  describe('Search Functionality with Tags', () => {
+    beforeEach(() => {
+      const mockItems = [
+        {
+          id: 1,
+          url: 'https://www.youtube.com/watch?v=1',
+          title: 'Music Video',
+          thumbnail: 'thumb1.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 0,
+          tags: ['music']
+        },
+        {
+          id: 2,
+          url: 'https://www.youtube.com/watch?v=2',
+          title: 'Tutorial Video',
+          thumbnail: 'thumb2.jpg',
+          dateAdded: Date.now(),
+          watched: false,
+          type: 'video' as const,
+          order: 1,
+          tags: ['tutorial']
+        }
+      ];
+
+      mockChrome.storage.local.get.mockImplementation((keys, callback) => {
+        callback({
+          youtubeLinks: mockItems,
+          theme: 'light',
+          sortBy: 'date-desc'
+        });
+      });
+    });
+
+    it('should search by video title', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+        expect(screen.getByText('Tutorial Video')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search by title...');
+      await user.type(searchInput, 'Music');
+
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+        expect(screen.queryByText('Tutorial Video')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should search by tag name', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+        expect(screen.getByText('Tutorial Video')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText('Search by title...');
+      await user.type(searchInput, 'music');
+
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+        expect(screen.queryByText('Tutorial Video')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should search within selected tag only', async () => {
+      render(<App />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+      });
+
+      // Switch to music tag
+      const musicTab = screen.getByText('music (1)');
+      await user.click(musicTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Music Video')).toBeInTheDocument();
+        expect(screen.queryByText('Tutorial Video')).not.toBeInTheDocument();
+      });
+
+      // Search for "tutorial" within music tag (should find nothing)
+      const searchInput = screen.getByPlaceholderText('Search by title...');
+      await user.type(searchInput, 'tutorial');
+
+      await waitFor(() => {
+        expect(screen.queryByText('Music Video')).not.toBeInTheDocument();
+        expect(screen.queryByText('Tutorial Video')).not.toBeInTheDocument();
+      });
+    });
   });
 });
