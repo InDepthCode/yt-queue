@@ -449,3 +449,151 @@ body.dark .input-form button {
     transform: rotate(360deg);
   }
 }
+
+/* Error Boundary Styles */
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 20px;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 300px;
+}
+
+.error-content h2 {
+  color: var(--danger-accent);
+  margin-bottom: 12px;
+}
+
+.error-content p {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.retry-button {
+  background-color: var(--primary-accent);
+  color: var(--bg-primary);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: var(--primary-accent-hover);
+}
+
+.error-details {
+  margin-top: 16px;
+  text-align: left;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.error-details summary {
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.error-details pre {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Notification Styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 350px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  border: 1px solid var(--border-color);
+}
+
+.notification-success {
+  background-color: var(--success-accent);
+  color: #202124;
+}
+
+.notification-error {
+  background-color: var(--danger-accent);
+  color: #202124;
+}
+
+.notification-warning {
+  background-color: #ff9800;
+  color: #202124;
+}
+
+.notification-info {
+  background-color: var(--primary-accent);
+  color: #202124;
+}
+
+.notification-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  flex-grow: 1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.notification-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.notification-close svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
