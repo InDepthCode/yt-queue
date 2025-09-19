@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "YT Queue",
+  "version": "0.0.1",
+  "description": "Save and manage YouTube videos & playlists to watch later.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "YT Queue"
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.youtubemultidownloader.com/*",
+    "https://noembed.com/*",
+    "https://img.youtube.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://api.youtubemultidownloader.com https://noembed.com; style-src 'self' 'unsafe-inline';"
+  }
+}
