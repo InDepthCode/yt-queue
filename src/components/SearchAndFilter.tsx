@@ -53,8 +53,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           <SelectContent>
             <SelectItem value="date-desc">Newest</SelectItem>
             <SelectItem value="date-asc">Oldest</SelectItem>
-            <SelectItem value="title-asc">A-Z</SelectItem>
-            <SelectItem value="title-desc">Z-A</SelectItem>
+          
           </SelectContent>
         </Select>
       </div>

@@ -20,7 +20,7 @@ export const TagNavigation: React.FC<TagNavigationProps> = ({
   };
 
   return (
-    <div className="flex gap-1 mb-4 overflow-x-auto pb-2">
+    <div className="flex gap-1 mb-4 overflow-x-auto pb-2 scrollbar-hide">
       <Button
         variant={selectedTag === 'all' ? 'default' : 'ghost'}
         size="sm"

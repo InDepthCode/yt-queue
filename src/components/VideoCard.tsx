@@ -171,11 +171,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             
             <div className="flex items-center space-x-1">
 
-              {item.tags.length > 0 && (
-                <span className="inline-block rounded-md border border-border bg-muted px-2 py-0.5 text-sm text-muted-foreground">
-                  {item.tags[0]}
-                </span>
-              )}
+             
               {item.type === 'video' && onSavePosition && (
                 <Button
                   variant="ghost"

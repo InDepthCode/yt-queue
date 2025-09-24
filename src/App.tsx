@@ -621,7 +621,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="w-[420px] h-[600px] bg-background border border-border/20 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-[420px] h-[600px] bg-background border border-border/20 rounded-lg shadow-2xl flex flex-col overflow-hidden max-w-[420px]">
         <div className="p-4 flex flex-col bg-gradient-to-b from-background to-muted/20 flex-1 min-h-0">
           {/* Header */}
           <Header
