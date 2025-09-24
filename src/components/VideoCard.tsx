@@ -97,7 +97,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         isDragging ? 'opacity-50' : ''
       } ${isSelected ? 'bg-primary/5' : ''} ${
         item.watched ? 'opacity-60' : ''
-      } border-b border-border/20 py-2 px-3`}
+      } border-b border-border/20 py-4 px-3 mb-3`}
     >
       <div className="flex items-center space-x-3">
         {/* Thumbnail */}
@@ -144,28 +144,38 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             />
           </div>
           
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              {formatDate(item.dateAdded) && (
-                <>
-                  <span>{formatDate(item.dateAdded)}</span>
-                  {(item.tags.length > 0 || (hasSavedPosition && item.videoDuration)) && <span>•</span>}
-                </>
-              )}
-              {item.tags.length > 0 && (
-                <>
-                  <span>{item.tags[0]}</span>
-                  {hasSavedPosition && item.videoDuration && <span>•</span>}
-                </>
-              )}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                {formatDate(item.dateAdded) && (
+                  <>
+                    <span>{formatDate(item.dateAdded)}</span>
+                    {item.tags.length > 0 && <span>•</span>}
+                  </>
+                )}
+                
+              </div>
               {hasSavedPosition && item.videoDuration && (
-                <span className="text-primary">
-                  {formatTime(item.savedPosition)} / {formatTime(item.videoDuration)}
-                </span>
+                <div className="flex items-center space-x-1 text-xs">
+                  <Clock className="h-3 w-3 text-primary" />
+                  <span className="text-primary font-medium">
+                    {formatTime(item.savedPosition)} / {formatTime(item.videoDuration)}
+                  </span>
+                </div>
+                
               )}
+                
+
+
             </div>
             
             <div className="flex items-center space-x-1">
+
+              {item.tags.length > 0 && (
+                <span className="inline-block rounded-md border border-gray-100 bg-gray-50 px-2 py-0.5 text-sm text-gray-900">
+                  {item.tags[0]}
+                </span>
+              )}
               {item.type === 'video' && onSavePosition && (
                 <Button
                   variant="ghost"
@@ -177,6 +187,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                   <Bookmark className="h-3 w-3" />
                 </Button>
               )}
+               
               <Button
                 variant="ghost"
                 size="sm"
@@ -193,14 +204,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                 className="h-7 px-3 text-xs"
               >
                 {hasSavedPosition ? 'Resume' : 'Watch'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onToggleWatched(item.id)}
-                className="h-7 px-2 text-xs"
-              >
-                {item.watched ? 'Undo' : 'Done'}
               </Button>
               <Button
                 variant="ghost"
