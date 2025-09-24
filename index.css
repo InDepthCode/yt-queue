@@ -325,9 +325,72 @@ body.dark .input-form button {
   margin: -16px 0 16px;
 }
 
+/* Selection Controls */
+.selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.control-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.control-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--primary-accent);
+    color: var(--text-primary);
+}
+
+.export-btn {
+    background: var(--success-accent);
+    color: #202124;
+}
+
+.export-btn:hover {
+    background: #34A853;
+}
+
+.selection-count {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Video Item Checkbox */
+.video-checkbox {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary-accent);
+}
+
+/* Selected State */
+.video-item-wrapper.selected .video-item {
+    border-color: var(--primary-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent) 25%, transparent);
+}
+
 /* Controls Container */
 .controls-container {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 20px;
     flex-shrink: 0;

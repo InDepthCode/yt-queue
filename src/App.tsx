@@ -30,24 +30,8 @@ import Notification from './components/Notification';
 import { useErrorHandler } from './hooks/useErrorHandler';
 import { apiService } from './services/apiService';
 
+// Declare chrome globally for extension environment
 declare var chrome: any;
-
-// Define the structure of a saved item (video or playlist)
-interface SavedItem {
-  id: number;
-  url: string;
-  title: string;
-  thumbnail: string;
-  dateAdded: number;
-  watched: boolean;
-  type: 'video' | 'playlist';
-  order: number; // For drag-and-drop reordering
-  tags: string[]; // Array of tag strings
-}
-
-type Theme = 'light' | 'dark';
-type SaveState = 'idle' | 'loading' | 'success';
-type SortBy = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc';
 
 // Helper to extract YouTube video ID from various URL formats
 const getYouTubeID = (url: string): string | null => {
@@ -66,12 +50,30 @@ const getYouTubePlaylistID = (url: string): string | null => {
     return match ? match[1] : null;
 };
 
+// Define the structure of a saved item (video or playlist)
+interface SavedItem {
+  id: number;
+  url: string;
+  title: string;
+  thumbnail: string;
+  dateAdded: number;
+  watched: boolean;
+  type: 'video' | 'playlist';
+  order: number; // For drag-and-drop reordering
+  tags: string[]; // Array of tag strings
+}
+
+type Theme = 'light' | 'dark';
+type SaveState = 'idle' | 'loading' | 'success';
+type SortBy = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc';
+type ExportFormat = 'text' | 'json';
+
 // SVG Icons for UI Actions
 const DeleteIcon = () => (
   <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
 );
 const SunIcon = () => (
-    <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.02 12.02c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zM20 6.01c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"></path></svg>
+    <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.02 12.02c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zM20 6.01c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39.39-1.03.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"></path></svg>
 );
 const MoonIcon = () => (
     <svg viewBox="0 0 24 24"><path d="M9.37 5.51c-.18.64.27 1.21.91 1.39.64.18 1.21-.27 1.39-.91s-.27-1.21-.91-1.39c-.64-.18-1.21.27-1.39.91zM10 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm7.13 10.13c-1.16-1.16-2.5-1.92-3.9-2.35.48-1.24.2-2.73-.85-3.78-1.4-1.4-3.6-1.63-5.26-.59-1.05.65-1.74 1.86-1.9 3.2C2.73 12.56 2 14.65 2 17c0 3.31 2.69 6 6 6 2.2 0 4.15-1.21 5.18-3.04.49.12 1 .18 1.52.18 2.76 0 5-2.24 5-5 .01-2.02-1.22-3.75-2.99-4.51z"></path></svg>
@@ -103,6 +105,9 @@ const AddIcon = () => (
 const MoreIcon = () => (
     <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
 );
+const DownloadIcon = () => (
+    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7z"></path></svg>
+);
 
 // Formats a timestamp into a relative date string
 const formatDateGroup = (timestamp: number) => {
@@ -120,14 +125,43 @@ const formatDateGroup = (timestamp: number) => {
     });
 };
 
+// Function to download a file from blob URL
+const downloadFile = (content: string, filename: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Export selected videos to text format
+const exportToText = (items: SavedItem[]) => {
+  const textLines = items.map(item =>
+    `- [${item.watched ? 'x' : ' '}] ${item.title}\n  URL: ${item.url}\n  Tags: ${item.tags.join(', ') || 'none'}\n  Type: ${item.type}\n  Added: ${new Date(item.dateAdded).toLocaleDateString()}\n`);
+  const content = textLines.join('\n');
+  downloadFile(content, 'yt-queue-export.txt', 'text/plain');
+};
+
+// Export selected videos to JSON format
+const exportToJSON = (items: SavedItem[]) => {
+  const content = JSON.stringify(items, null, 2);
+  downloadFile(content, 'yt-queue-export.json', 'application/json');
+};
+
 // Sortable Video Item Component
 interface SortableVideoItemProps {
   item: SavedItem;
   onToggleWatched: (id: number) => void;
   onDelete: (id: number) => void;
+  isSelected: boolean;
+  onSelectionChange: (id: number, selected: boolean) => void;
 }
 
-const SortableVideoItem = ({ item, onToggleWatched, onDelete }: SortableVideoItemProps) => {
+const SortableVideoItem = ({ item, onToggleWatched, onDelete, isSelected, onSelectionChange }: SortableVideoItemProps) => {
   const {
     attributes,
     listeners,
@@ -147,16 +181,23 @@ const SortableVideoItem = ({ item, onToggleWatched, onDelete }: SortableVideoIte
     <div
       ref={setNodeRef}
       style={style}
-      className={`video-item-wrapper ${item.watched ? 'watched' : ''} ${isDragging ? 'dragging' : ''}`}
+      className={`video-item-wrapper ${item.watched ? 'watched' : ''} ${isDragging ? 'dragging' : ''} ${isSelected ? 'selected' : ''}`}
     >
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={(e) => onSelectionChange(item.id, e.target.checked)}
+        className="video-checkbox"
+        onClick={(e) => e.stopPropagation()}
+      />
       <button className="watched-toggle" onClick={() => onToggleWatched(item.id)} aria-label={item.watched ? 'Mark as unwatched' : 'Mark as watched'}>
         <CheckIcon />
       </button>
-      
+
       <div className="drag-handle" {...attributes} {...listeners} aria-label="Drag to reorder">
         <DragHandleIcon />
       </div>
-      
+
       <a href={item.url} target="_blank" rel="noopener noreferrer" className="video-item-link">
         <div className="video-item">
           {item.thumbnail && item.thumbnail !== 'placeholder' ? (
@@ -206,20 +247,56 @@ function App() {
     message: string;
   }>({ show: false, type: 'info', message: '' });
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
   const { error, setError, clearError, handleAsyncError } = useErrorHandler();
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Selection handling functions
+  const handleSelectionChange = (id: number, selected: boolean) => {
+    if (selected) {
+      setSelectedItems(prev => [...prev, id]);
+    } else {
+      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+    }
+  };
+
+  const handleSelectAll = () => {
+    const filteredItems = selectedTag === 'all' ? items : items.filter(item => item.tags.includes(selectedTag));
+    if (selectedItems.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(filteredItems.map(item => item.id));
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedItems([]);
+  };
+
+  const showNotification = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+    setNotification({ show: true, type, message });
+  };
+
+  // Export functionality
+  const handleExportText = () => {
+    if (selectedItems.length === 0) {
+      showNotification('warning', 'Please select videos to export');
+      return;
+    }
+    const selectedItemsData = items.filter(item => selectedItems.includes(item.id));
+    exportToText(selectedItemsData);
+    showNotification('success', `Exported ${selectedItems.length} videos to text file`);
+  };
+
+  const handleExportJSON = () => {
+    if (selectedItems.length === 0) {
+      showNotification('warning', 'Please select videos to export');
+      return;
+    }
+    const selectedItemsData = items.filter(item => selectedItems.includes(item.id));
+    exportToJSON(selectedItemsData);
+    showNotification('success', `Exported ${selectedItems.length} videos to JSON file`);
+  };
 
   // Migration function to add order and tags properties to existing items
   const migrateItems = (items: SavedItem[]): SavedItem[] => {
@@ -238,7 +315,7 @@ function App() {
           const migratedItems = migrateItems(result.youtubeLinks);
           setItems(migratedItems);
         }
-        
+
         const savedTheme = result.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         setTheme(savedTheme);
         if(result.sortBy) setSortBy(result.sortBy);
@@ -255,17 +332,13 @@ function App() {
   useEffect(() => {
     document.body.className = theme;
     if (isLoaded && chrome && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ 
-          theme, 
-          youtubeLinks: items, 
-          sortBy 
+        chrome.storage.local.set({
+          theme,
+          youtubeLinks: items,
+          sortBy
         });
     }
   }, [theme, items, sortBy, isLoaded]);
-
-  const showNotification = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
-    setNotification({ show: true, type, message });
-  };
 
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }));
@@ -287,7 +360,7 @@ function App() {
     }
 
     setSaveState('loading');
-    
+
     const result = await handleAsyncError(async () => {
       const response = await apiService.fetchVideoData(newUrl);
       if (!response.success) {
@@ -327,7 +400,7 @@ function App() {
     setItems(items.filter(item => item.id !== id));
     showNotification('info', 'Video removed from queue');
   };
-  
+
   const handleToggleWatched = (id: number) => {
     setItems(items.map(item => item.id === id ? { ...item, watched: !item.watched } : item));
     const item = items.find(item => item.id === id);
@@ -372,7 +445,7 @@ function App() {
       setItems((items) => {
         const draggedItem = items.find(item => item.id === active.id);
         const targetItem = items.find(item => item.id === over.id);
-        
+
         if (!draggedItem || !targetItem) return items;
 
         // Only allow reordering within the same tag
@@ -384,7 +457,7 @@ function App() {
         const newIndex = items.findIndex((item) => item.id === over.id);
 
         const newItems = arrayMove(items, oldIndex, newIndex);
-        
+
         // Update order property for items in the same tag
         const tagToUpdate = selectedTag === 'all' ? draggedItem.tags[0] : selectedTag;
         return newItems.map((item, index) => {
@@ -409,14 +482,14 @@ function App() {
 
   const processedItems = useMemo(() => {
     // First filter by selected tag
-    const tagFiltered = selectedTag === 'all' 
-      ? items 
+    const tagFiltered = selectedTag === 'all'
+      ? items
       : items.filter(item => item.tags.includes(selectedTag));
-    
+
     // Then filter by search query
     const filtered = tagFiltered.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTags = searchQuery === '' || item.tags.some(tag => 
+      const matchesTags = searchQuery === '' || item.tags.some(tag =>
         tag.toLowerCase().includes(searchQuery.toLowerCase())
       );
       return matchesSearch || matchesTags;
@@ -443,6 +516,23 @@ function App() {
 
   const dateGroups = Object.keys(processedItems);
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Calculate totals for export controls
+  const totalItems = dateGroups.length > 0 ? Object.values(processedItems).flat().length : 0;
+  const hasSelection = selectedItems.length > 0;
+  const allSelected = totalItems > 0 && selectedItems.length === totalItems;
+
   return (
     <ErrorBoundary>
       <div className="container">
@@ -455,7 +545,7 @@ function App() {
         <main>
           {/* Tag Navigation */}
           <div className="tag-navigation">
-            <button 
+            <button
               className={`tag-nav-item ${selectedTag === 'all' ? 'active' : ''}`}
               onClick={() => switchToTag('all')}
             >
@@ -478,21 +568,21 @@ function App() {
           {/* Add Video Form */}
           <form className="input-form" onSubmit={(e) => { e.preventDefault(); handleSaveItem(); }}>
             <div className="form-row">
-              <input 
-                type="text" 
-                value={newUrl} 
-                onChange={(e) => setNewUrl(e.target.value)} 
-                placeholder="Paste YouTube URL here" 
-                aria-label="YouTube URL Input" 
+              <input
+                type="text"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                placeholder="Paste YouTube URL here"
+                aria-label="YouTube URL Input"
                 disabled={saveState !== 'idle'}
                 className="url-input"
               />
-              <input 
-                type="text" 
-                value={newTag} 
-                onChange={(e) => setNewTag(e.target.value)} 
-                placeholder="Tag name" 
-                aria-label="Tag Input" 
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Tag name"
+                aria-label="Tag Input"
                 disabled={saveState !== 'idle'}
                 className="tag-input"
               />
@@ -501,15 +591,31 @@ function App() {
               </button>
             </div>
           </form>
-          
+
           {error.hasError && (
             <div className="error-message">
               {error.message}
             </div>
           )}
-          
+
           {items.length > 0 && (
               <div className="controls-container">
+                  <div className="selection-controls">
+                      <button onClick={handleSelectAll} className="control-btn">
+                        {allSelected ? 'Deselect All' : 'Select All'}
+                      </button>
+                      {hasSelection && (
+                        <>
+                          <span className="selection-count">{selectedItems.length} selected</span>
+                          <button onClick={handleExportText} className="control-btn export-btn" title="Export as text file">
+                            <DownloadIcon /> Text
+                          </button>
+                          <button onClick={handleExportJSON} className="control-btn export-btn" title="Export as JSON file">
+                            <DownloadIcon /> JSON
+                          </button>
+                        </>
+                      )}
+                  </div>
                   <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by title..." className="search-input" aria-label="Search saved videos"/>
                    <select className="sort-select" value={sortBy} onChange={e => setSortBy(e.target.value as SortBy)} aria-label="Sort videos by">
                       <option value="date-desc">Newest First</option>
@@ -538,6 +644,8 @@ function App() {
                                         item={item}
                                         onToggleWatched={handleToggleWatched}
                                         onDelete={handleDeleteItem}
+                                        isSelected={selectedItems.includes(item.id)}
+                                        onSelectionChange={handleSelectionChange}
                                     />
                                 ))}
                             </SortableContext>
@@ -549,7 +657,7 @@ function App() {
                     <div className="empty-state"><EmptyIcon /><p>No videos saved yet.</p><p>Paste a link above to get started!</p></div>
                 )}
             </div>
-            
+
             <DragOverlay>
               {activeId ? (
                 <div className="video-item-wrapper dragging-overlay">
@@ -576,7 +684,7 @@ function App() {
             </DragOverlay>
           </DndContext>
         </main>
-        
+
         <Notification
           show={notification.show}
           type={notification.type}
