@@ -83,6 +83,9 @@ interface SavedItem {
   type: 'video' | 'playlist';
   order: number; // For drag-and-drop reordering
   tags: string[]; // Array of tag strings
+  savedPosition?: number; // Video position in seconds (for videos only)
+  videoDuration?: number; // Total video duration in seconds
+  lastWatched?: number; // Timestamp when position was last saved
 }
 
 type Theme = 'light' | 'dark';
@@ -93,7 +96,18 @@ type ExportFormat = 'text' | 'json';
 
 // Formats a timestamp into a relative date string
 const formatDateGroup = (timestamp: number) => {
+    // Validate timestamp
+    if (!timestamp || isNaN(timestamp) || !isFinite(timestamp)) {
+        return 'Unknown Date';
+    }
+    
     const date = new Date(timestamp);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return 'Unknown Date';
+    }
+    
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -122,8 +136,14 @@ const downloadFile = (content: string, filename: string, mimeType: string) => {
 
 // Export selected videos to text format
 const exportToText = (items: SavedItem[]) => {
-  const textLines = items.map(item =>
-    `- [${item.watched ? 'x' : ' '}] ${item.title}\n  URL: ${item.url}\n  Tags: ${item.tags.join(', ') || 'none'}\n  Type: ${item.type}\n  Added: ${new Date(item.dateAdded).toLocaleDateString()}\n`);
+  const textLines = items.map(item => {
+    // Validate and format dateAdded
+    const dateAdded = item.dateAdded && !isNaN(new Date(item.dateAdded).getTime()) 
+      ? new Date(item.dateAdded).toLocaleDateString() 
+      : 'Unknown date';
+    
+    return `- [${item.watched ? 'x' : ' '}] ${item.title}\n  URL: ${item.url}\n  Tags: ${item.tags.join(', ') || 'none'}\n  Type: ${item.type}\n  Added: ${dateAdded}\n`;
+  });
   const content = textLines.join('\n');
   downloadFile(content, 'yt-queue-export.txt', 'text/plain');
 };
@@ -141,9 +161,10 @@ interface SortableVideoItemProps {
   onDelete: (id: number) => void;
   isSelected: boolean;
   onSelectionChange: (id: number, selected: boolean) => void;
+  onSavePosition?: (id: number) => void;
 }
 
-const SortableVideoItem = ({ item, onToggleWatched, onDelete, isSelected, onSelectionChange }: SortableVideoItemProps) => {
+const SortableVideoItem = ({ item, onToggleWatched, onDelete, isSelected, onSelectionChange, onSavePosition }: SortableVideoItemProps) => {
   const {
     attributes,
     listeners,
@@ -166,6 +187,7 @@ const SortableVideoItem = ({ item, onToggleWatched, onDelete, isSelected, onSele
         onDelete={onDelete}
         isSelected={isSelected}
         onSelectionChange={onSelectionChange}
+        onSavePosition={onSavePosition}
         dragHandleProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
       />
@@ -242,11 +264,22 @@ function App() {
 
   // Migration function to add order and tags properties to existing items
   const migrateItems = (items: SavedItem[]): SavedItem[] => {
-    return items.map((item, index) => ({
-      ...item,
-      order: item.order !== undefined ? item.order : index,
-      tags: item.tags || [], // Default to empty tags array
-    }));
+    return items.map((item, index) => {
+      // Ensure dateAdded is valid, fallback to current timestamp if invalid
+      const validDateAdded = item.dateAdded && !isNaN(new Date(item.dateAdded).getTime()) 
+        ? item.dateAdded 
+        : Date.now();
+      
+      return {
+        ...item,
+        dateAdded: validDateAdded, // Ensure valid dateAdded
+        order: item.order !== undefined ? item.order : index,
+        tags: item.tags || [], // Default to empty tags array
+        savedPosition: item.savedPosition || 0, // Default to 0 if not set
+        videoDuration: item.videoDuration || 0, // Default to 0 if not set
+        lastWatched: item.lastWatched || validDateAdded, // Default to valid dateAdded if not set
+      };
+    });
   };
 
   // Load data from chrome.storage.local on component mount
@@ -255,10 +288,14 @@ function App() {
       if (chrome && chrome.storage && chrome.storage.local) {
         try {
           const result = await chrome.storage.local.get(['youtubeLinks', 'theme', 'sortBy']);
-          if (result.youtubeLinks) {
+          if (result.youtubeLinks && Array.isArray(result.youtubeLinks)) {
             const migratedItems = migrateItems(result.youtubeLinks);
             setItems(migratedItems);
             console.log('Loaded videos from storage:', migratedItems.length);
+          } else {
+            // Handle case where youtubeLinks is not an array or doesn't exist
+            console.log('No valid video data found in storage, starting with empty array');
+            setItems([]);
           }
 
           const savedTheme = result.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -267,6 +304,8 @@ function App() {
           setIsLoaded(true);
         } catch (error) {
           console.error('Error loading data from storage:', error);
+          // Reset to empty state on error to prevent crashes
+          setItems([]);
           const savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           setTheme(savedTheme);
           setIsLoaded(true);
@@ -375,6 +414,73 @@ function App() {
     const item = items.find(item => item.id === id);
     if (item) {
       showNotification('info', item.watched ? 'Marked as unwatched' : 'Marked as watched');
+    }
+  };
+
+  const handleSavePosition = async (id: number) => {
+    const item = items.find(item => item.id === id);
+    if (!item || item.type !== 'video') return;
+
+    try {
+      // Get the current tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) {
+        showNotification('error', 'Could not get current tab');
+        return;
+      }
+
+      console.log('Attempting to save position for video:', item.title);
+      console.log('Current tab URL:', tab.url);
+
+      // Check if we're on YouTube
+      if (!tab.url || !tab.url.includes('youtube.com')) {
+        showNotification('error', 'Please open a YouTube video page to save position');
+        return;
+      }
+
+      // Send message to content script to get current video data
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_VIDEO_DATA' });
+      
+      console.log('Content script response:', response);
+      
+      if (response && response.success && response.data) {
+        const { currentTime, duration, videoId } = response.data;
+        
+        console.log('Video data received:', { currentTime, duration, videoId });
+        
+        // Check if this is the same video
+        if (item.url.includes(videoId)) {
+          const updatedItems = items.map(item => 
+            item.id === id 
+              ? { 
+                  ...item, 
+                  savedPosition: currentTime, 
+                  videoDuration: duration,
+                  lastWatched: Date.now()
+                } 
+              : item
+          );
+          
+          // Update state
+          setItems(updatedItems);
+          
+          // Save to storage directly (no background script needed)
+          if (chrome && chrome.storage && chrome.storage.local) {
+            await chrome.storage.local.set({ youtubeLinks: updatedItems });
+            console.log('Position saved to storage');
+          }
+          
+          showNotification('success', `Position saved at ${Math.floor(currentTime / 60)}:${Math.floor(currentTime % 60).toString().padStart(2, '0')}`);
+        } else {
+          showNotification('error', 'Please open the video you want to save position for');
+        }
+      } else {
+        console.error('Failed to get video data:', response);
+        showNotification('error', 'Could not get video data. Make sure you are on a YouTube video page and refresh the page.');
+      }
+    } catch (error) {
+      console.error('Error saving position:', error);
+      showNotification('error', `Failed to save position: ${error.message}`);
     }
   };
 
@@ -515,8 +621,8 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="w-[420px] h-[600px] bg-background overflow-hidden">
-        <div className="p-4 h-full flex flex-col">
+      <div className="w-[420px] h-[600px] bg-background overflow-hidden border border-border/20 rounded-lg shadow-2xl">
+        <div className="p-4 h-full flex flex-col bg-gradient-to-b from-background to-muted/20">
           {/* Header */}
           <Header
             theme={theme}
@@ -575,8 +681,8 @@ function App() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
-                <ScrollArea className="h-full">
-                <div className="space-y-4">
+                <ScrollArea className="h-full pr-2">
+                <div className="space-y-2">
                   {dateGroups.length > 0 ? (
                     dateGroups.map(date => (
                       <DateGroup
@@ -597,6 +703,7 @@ function App() {
                                 onDelete={handleDeleteItem}
                                 isSelected={selectedItems.includes(item.id)}
                                 onSelectionChange={handleSelectionChange}
+                                onSavePosition={handleSavePosition}
                               />
                             ))}
                           </div>
@@ -619,6 +726,7 @@ function App() {
                     onDelete={() => {}}
                     isSelected={false}
                     onSelectionChange={() => {}}
+                    onSavePosition={() => {}}
                     isDragging={true}
                   />
                 ) : null}

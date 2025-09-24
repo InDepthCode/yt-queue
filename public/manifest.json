@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YT Queue",
   "version": "0.1.0",
-  "description": "Save and manage YouTube videos & playlists to watch later. Now with drag-and-drop reordering and tagging system!",
+  "description": "Save and manage YouTube videos & playlists to watch later. Now with drag-and-drop reordering, tagging system, and Netflix-style position saving!",
   "action": {
     "default_popup": "index.html",
     "default_title": "YT Queue"
@@ -13,13 +13,22 @@
     "48": "icons/48.png",
     "128": "icons/128.png"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_end"
+    }
+  ],
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
     "https://api.youtubemultidownloader.com/*",
     "https://noembed.com/*",
-    "https://img.youtube.com/*"
+    "https://img.youtube.com/*",
+    "https://www.youtube.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://api.youtubemultidownloader.com https://noembed.com; style-src 'self' 'unsafe-inline';"

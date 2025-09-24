@@ -9,9 +9,18 @@ export default defineConfig({
     emptyOutDir: true,
     // Bundle everything - no external dependencies for Chrome extension
     rollupOptions: {
+      input: {
+        main: './index.html',
+        'content-script': './src/content-script.ts',
+      },
       output: {
         manualChunks: undefined,
-        entryFileNames: 'assets/[name].js',
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'content-script') {
+            return '[name].js';
+          }
+          return 'assets/[name].js';
+        },
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
         // Ensure no inline scripts or styles
