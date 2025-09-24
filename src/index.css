@@ -200,3 +200,59 @@
     display: none;  /* Safari and Chrome */
   }
 }
+
+/* Pagination styles */
+.pagination-container {
+  position: sticky;
+  bottom: 0;
+  background: hsl(var(--background));
+  border-top: 1px solid hsl(var(--border) / 0.1);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+/* Video card container for pagination */
+.video-list-paginated {
+  height: 225px; /* 3 cards * 75px each */
+  overflow-y: auto;
+}
+
+/* Hide scrollbar for video list */
+.video-list-paginated::-webkit-scrollbar {
+  display: none;
+}
+
+.video-list-paginated {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Date tabs styling */
+.date-tabs-container {
+  background: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border) / 0.1);
+}
+
+.date-tab {
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.date-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px hsl(var(--foreground) / 0.1);
+}
+
+.date-tab.active {
+  box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+}
+
+/* Scrollable tabs */
+.scrollable-tabs {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollable-tabs::-webkit-scrollbar {
+  display: none;
+}

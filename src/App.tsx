@@ -212,6 +212,9 @@ function App() {
   }>({ show: false, type: 'info', message: '' });
   const [activeId, setActiveId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 2;
+  const [activeDateTab, setActiveDateTab] = useState<string>('Today');
 
   const { error, setError, clearError, handleAsyncError } = useErrorHandler();
 
@@ -580,27 +583,79 @@ function App() {
         }
     });
 
-    const result = sorted.reduce((acc, item) => {
-        const dateGroup = formatDateGroup(item.dateAdded);
-        if (!acc[dateGroup]) acc[dateGroup] = [];
-        acc[dateGroup].push(item);
-        return acc;
-    }, {} as Record<string, SavedItem[]>);
-
-    // Debug logging
-    console.log('Debug - processedItems:', {
-      items: items.length,
-      tagFiltered: tagFiltered.length,
-      filtered: filtered.length,
-      sorted: sorted.length,
-      result: Object.keys(result).map(key => ({ date: key, count: result[key].length }))
-    });
-
-    return result;
+    return sorted;
 
   }, [items, searchQuery, sortBy, selectedTag]);
 
-  const dateGroups = Object.keys(processedItems);
+  // Group items by date for tabs
+  const dateGroupedItems = useMemo(() => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const groups: Record<string, SavedItem[]> = {
+      'Today': [],
+      'Yesterday': [],
+    };
+
+    processedItems.forEach(item => {
+      const itemDate = new Date(item.dateAdded);
+      const itemDateString = itemDate.toDateString();
+      
+      if (itemDateString === today.toDateString()) {
+        groups['Today'].push(item);
+      } else if (itemDateString === yesterday.toDateString()) {
+        groups['Yesterday'].push(item);
+      } else {
+        const dateKey = itemDate.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        if (!groups[dateKey]) {
+          groups[dateKey] = [];
+        }
+        groups[dateKey].push(item);
+      }
+    });
+
+    return groups;
+  }, [processedItems]);
+
+  // Get available date tabs
+  const dateTabs = useMemo(() => {
+    const tabs = Object.keys(dateGroupedItems).filter(key => dateGroupedItems[key].length > 0);
+    return tabs.sort((a, b) => {
+      if (a === 'Today') return -1;
+      if (b === 'Today') return 1;
+      if (a === 'Yesterday') return -1;
+      if (b === 'Yesterday') return 1;
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+  }, [dateGroupedItems]);
+
+  // Get current tab items
+  const currentTabItems = dateGroupedItems[activeDateTab] || [];
+
+  // Pagination logic for current tab
+  const totalPages = Math.ceil(currentTabItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = currentTabItems.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTag, sortBy, activeDateTab]);
+
+  // Auto-select first available tab when tabs change
+  useEffect(() => {
+    if (dateTabs.length > 0 && !dateTabs.includes(activeDateTab)) {
+      setActiveDateTab(dateTabs[0]);
+    }
+  }, [dateTabs, activeDateTab]);
+
+  // Remove old dateGroups logic since we're using pagination now
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -615,7 +670,7 @@ function App() {
   );
 
   // Calculate totals for export controls
-  const totalItems = dateGroups.length > 0 ? Object.values(processedItems).flat().length : 0;
+  const totalItems = currentTabItems.length;
   const hasSelection = selectedItems.length > 0;
   const allSelected = totalItems > 0 && selectedItems.length === totalItems;
 
@@ -670,68 +725,117 @@ function App() {
                   onExportJSON={handleExportJSON}
                   onDeselectAll={handleDeselectAll}
                 />
+
+                {/* Date Tabs */}
+                {dateTabs.length > 0 && (
+                  <div className="date-tabs-container px-4 py-2">
+                    <div className="flex space-x-1 overflow-x-auto scrollable-tabs">
+                      {dateTabs.map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveDateTab(tab)}
+                          className={`date-tab px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
+                            activeDateTab === tab
+                              ? 'active bg-primary text-primary-foreground shadow-sm'
+                              : 'text-muted-foreground hover:bg-muted/50 border border-border/30'
+                          }`}
+                        >
+                          {tab} ({dateGroupedItems[tab].length})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
             {/* Video List */}
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
-                <ScrollArea className="h-full pr-2">
-                <div className="space-y-2">
-                  {dateGroups.length > 0 ? (
-                    dateGroups.map(date => (
-                      <DateGroup
-                        key={date}
-                        date={date}
-                        count={processedItems[date].length}
-                      >
+                <div className="flex-1 min-h-0">
+                  <ScrollArea className="video-list-paginated pr-2">
+                    <div className="space-y-0">
+                      {currentItems.length > 0 ? (
                         <SortableContext
-                          items={processedItems[date].map(item => item.id)}
+                          items={currentItems.map(item => item.id)}
                           strategy={verticalListSortingStrategy}
                         >
-                          <div className="space-y-0">
-                            {processedItems[date].map(item => (
-                              <SortableVideoItem
-                                key={item.id}
-                                item={item}
-                                onToggleWatched={handleToggleWatched}
-                                onDelete={handleDeleteItem}
-                                isSelected={selectedItems.includes(item.id)}
-                                onSelectionChange={handleSelectionChange}
-                                onSavePosition={handleSavePosition}
-                              />
-                            ))}
-                          </div>
+                          {currentItems.map(item => (
+                            <SortableVideoItem
+                              key={item.id}
+                              item={item}
+                              onToggleWatched={handleToggleWatched}
+                              onDelete={handleDeleteItem}
+                              isSelected={selectedItems.includes(item.id)}
+                              onSelectionChange={handleSelectionChange}
+                              onSavePosition={handleSavePosition}
+                            />
+                          ))}
                         </SortableContext>
-                      </DateGroup>
-                    ))
-                  ) : items.length > 0 && searchQuery ? (
-                    <EmptyState type="no-search-results" searchQuery={searchQuery} />
-                  ) : (
-                    <EmptyState type="no-videos" />
-                  )}
+                      ) : items.length > 0 && searchQuery ? (
+                        <EmptyState type="no-search-results" searchQuery={searchQuery} />
+                      ) : (
+                        <EmptyState type="no-videos" />
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
-                </ScrollArea>
 
                 <DragOverlay>
-                {activeId ? (
-                  <VideoCard
-                    item={items.find(item => item.id === activeId)!}
-                    onToggleWatched={() => {}}
-                    onDelete={() => {}}
-                    isSelected={false}
-                    onSelectionChange={() => {}}
-                    onSavePosition={() => {}}
-                    isDragging={true}
-                  />
-                ) : null}
+                  {activeId ? (
+                    <VideoCard
+                      item={items.find(item => item.id === activeId)!}
+                      onToggleWatched={() => {}}
+                      onDelete={() => {}}
+                      isSelected={false}
+                      onSelectionChange={() => {}}
+                      onSavePosition={() => {}}
+                      isDragging={true}
+                    />
+                  ) : null}
                 </DragOverlay>
               </DndContext>
+
+              {/* Pagination Controls - Always at bottom */}
+              {currentTabItems.length > 0 && (
+                <div className="pagination-container flex justify-center items-center py-2 border-t border-border/10 bg-gradient-to-t from-muted/20 to-background backdrop-blur-sm">
+                  <div className="flex items-center space-x-2">
+                   
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, index) => {
+                        const page = index + 1;
+                        const isCurrentPage = page === currentPage;
+                        
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-8 h-8 text-sm rounded-md transition-colors ${
+                              isCurrentPage
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:bg-muted/50 border border-border/30'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                
+                  </div>
+                  
+                  {/* <div className="ml-4 text-xs text-muted-foreground">
+                    Page {currentPage} of {totalPages} ({processedItems.length} videos)
+                  </div> */}
+                </div>
+              )}
             </div>
           </div>
         </div>
