@@ -125,9 +125,9 @@
     66% { transform: translateY(5px) rotate(-1deg); }
   }
   
-  /* Custom scrollbar styling */
+  /* Custom scrollbar styling - smaller and more subtle */
   .scroll-area::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
   
   .scroll-area::-webkit-scrollbar-track {
@@ -135,12 +135,59 @@
   }
   
   .scroll-area::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 2px;
   }
   
   .scroll-area::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+  
+  /* Global scrollbar styling for consistency */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 2px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+  
+  /* Firefox scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+  }
+  
+  /* Enhanced video card dividers */
+  .video-card-divider {
+    position: relative;
+  }
+  
+  .video-card-divider::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--border) / 0.3) 20%,
+      hsl(var(--border) / 0.5) 50%,
+      hsl(var(--border) / 0.3) 80%,
+      transparent 100%
+    );
   }
   
   /* Hide horizontal scrollbar for filter buttons */

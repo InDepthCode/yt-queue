@@ -97,7 +97,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         isDragging ? 'opacity-50' : ''
       } ${isSelected ? 'bg-primary/5' : ''} ${
         item.watched ? 'opacity-60' : ''
-      } border-b border-border/20 py-3 px-3`}
+      } border-b border-border/30 py-3 px-3 video-card-divider`}
     >
       <div className="flex items-center space-x-3">
         {/* Thumbnail */}
