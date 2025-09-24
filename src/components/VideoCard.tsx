@@ -97,7 +97,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         isDragging ? 'opacity-50' : ''
       } ${isSelected ? 'bg-primary/5' : ''} ${
         item.watched ? 'opacity-60' : ''
-      } border-b border-border/20 py-4 px-3 mb-3`}
+      } border-b border-border/20 py-3 px-3`}
     >
       <div className="flex items-center space-x-3">
         {/* Thumbnail */}
@@ -172,7 +172,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             <div className="flex items-center space-x-1">
 
               {item.tags.length > 0 && (
-                <span className="inline-block rounded-md border border-gray-100 bg-gray-50 px-2 py-0.5 text-sm text-gray-900">
+                <span className="inline-block rounded-md border border-border bg-muted px-2 py-0.5 text-sm text-muted-foreground">
                   {item.tags[0]}
                 </span>
               )}

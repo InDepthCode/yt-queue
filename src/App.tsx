@@ -621,8 +621,8 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="w-[420px] h-[600px] bg-background overflow-hidden border border-border/20 rounded-lg shadow-2xl">
-        <div className="p-4 h-full flex flex-col bg-gradient-to-b from-background to-muted/20">
+      <div className="w-[420px] h-[600px] bg-background border border-border/20 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+        <div className="p-4 flex flex-col bg-gradient-to-b from-background to-muted/20 flex-1 min-h-0">
           {/* Header */}
           <Header
             theme={theme}
@@ -630,7 +630,7 @@ function App() {
             totalVideos={items.length}
           />
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Add Video Form */}
             <AddVideoForm
               onSave={(url, tag) => {
@@ -674,7 +674,7 @@ function App() {
             )}
 
             {/* Video List */}
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

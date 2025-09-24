@@ -53,13 +53,92 @@
   * {
     @apply border-border;
   }
+  
+  /* Remove focus outline and add custom focus styles */
+  *:focus {
+    outline: none;
+  }
+  
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     font-variation-settings: normal;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    
+    /* Liquid glass background effect */
+    background: linear-gradient(135deg, 
+      hsl(240 10% 3.9%) 0%, 
+      hsl(240 8% 5.5%) 25%, 
+      hsl(240 6% 7.2%) 50%, 
+      hsl(240 8% 5.5%) 75%, 
+      hsl(240 10% 3.9%) 100%
+    );
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  
+  /* Glass effect overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(0.5px);
+    -webkit-backdrop-filter: blur(0.5px);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  /* Subtle animated background pattern */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.05) 0%, transparent 50%);
+    background-size: 400px 400px, 300px 300px, 500px 500px;
+    animation: float 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -2;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-10px) rotate(1deg); }
+    66% { transform: translateY(5px) rotate(-1deg); }
+  }
+  
+  /* Custom scrollbar styling */
+  .scroll-area::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scroll-area::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .scroll-area::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
