@@ -42,7 +42,7 @@ function saveVideoPosition() {
   }
 
   // Send message to background script
-  chrome.runtime.sendMessage({
+  (window as any).chrome?.runtime?.sendMessage?.({
     type: 'SAVE_VIDEO_POSITION',
     data: {
       videoId: videoData.videoId,
@@ -89,21 +89,39 @@ function checkAndRestoreFromURL() {
 }
 
 // Listen for messages from the extension
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+(window as any).chrome?.runtime?.onMessage?.addListener?.((message: any, sender: any, sendResponse: any) => {
   console.log('Content script received message:', message);
   
-  if (message.type === 'SAVE_POSITION') {
-    saveVideoPosition();
-    sendResponse({ success: true });
-  } else if (message.type === 'RESTORE_POSITION') {
-    const { videoId, position } = message.data;
-    restoreVideoPosition(videoId, position);
-    sendResponse({ success: true });
-  } else if (message.type === 'GET_VIDEO_DATA') {
-    console.log('Getting video data...');
-    const videoData = getVideoData();
-    console.log('Video data retrieved:', videoData);
-    sendResponse({ success: !!videoData, data: videoData });
+  try {
+    if (message.type === 'SAVE_POSITION') {
+      saveVideoPosition();
+      sendResponse({ success: true });
+    } else if (message.type === 'RESTORE_POSITION') {
+      const { videoId, position } = message.data;
+      restoreVideoPosition(videoId, position);
+      sendResponse({ success: true });
+    } else if (message.type === 'GET_VIDEO_DATA') {
+      console.log('Getting video data...');
+      const videoData = getVideoData();
+      console.log('Video data retrieved:', videoData);
+      
+      if (videoData) {
+        sendResponse({ success: true, data: videoData });
+      } else {
+        sendResponse({ 
+          success: false, 
+          error: 'No video data available. Make sure you are on a YouTube video page and the video is loaded.' 
+        });
+      }
+    } else {
+      sendResponse({ success: false, error: 'Unknown message type' });
+    }
+  } catch (error) {
+    console.error('Error in content script message handler:', error);
+    sendResponse({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    });
   }
   
   return true; // Keep message channel open for async response

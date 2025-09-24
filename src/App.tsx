@@ -325,7 +325,7 @@ function App() {
 
   // Save theme, items, and sort preference to storage when they change
   useEffect(() => {
-    document.body.className = theme;
+    document.documentElement.className = theme;
     if (isLoaded && chrome && chrome.storage && chrome.storage.local) {
       const saveData = async () => {
         try {
@@ -479,7 +479,8 @@ function App() {
         }
       } else {
         console.error('Failed to get video data:', response);
-        showNotification('error', 'Could not get video data. Make sure you are on a YouTube video page and refresh the page.');
+        const errorMessage = response?.error || 'Could not get video data. Make sure you are on a YouTube video page and refresh the page.';
+        showNotification('error', errorMessage);
       }
     } catch (error) {
       console.error('Error saving position:', error);
