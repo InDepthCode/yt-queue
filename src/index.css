@@ -26,34 +26,21 @@
     --radius: 0.75rem;
   }
 
-  .dark,
-  html.dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 0.75rem;
-  }
 }
 
 @layer base {
   * {
     @apply border-border;
+  }
+  
+  /* Global rounded corners for all elements */
+  button, input, select, textarea, [role="button"] {
+    border-radius: var(--radius);
+  }
+  
+  /* Ensure cards and containers have rounded corners */
+  .card, [class*="card"], [class*="container"], [class*="modal"] {
+    border-radius: var(--radius);
   }
   
   /* Remove focus outline and add custom focus styles */
@@ -75,56 +62,67 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
-    
-    /* Liquid glass background effect */
-    background: linear-gradient(135deg, 
-      hsl(240 10% 3.9%) 0%, 
-      hsl(240 8% 5.5%) 25%, 
-      hsl(240 6% 7.2%) 50%, 
-      hsl(240 8% 5.5%) 75%, 
-      hsl(240 10% 3.9%) 100%
-    );
-    background-attachment: fixed;
+    background: hsl(var(--background));
     min-height: 100vh;
   }
   
-  /* Glass effect overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(0.5px);
-    -webkit-backdrop-filter: blur(0.5px);
-    pointer-events: none;
-    z-index: -1;
+  /* Ensure main app container has rounded corners */
+  #root > div {
+    border-radius: var(--radius);
   }
   
-  /* Subtle animated background pattern */
-  body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.05) 0%, transparent 50%);
-    background-size: 400px 400px, 300px 300px, 500px 500px;
-    animation: float 20s ease-in-out infinite;
-    pointer-events: none;
-    z-index: -2;
+  /* Force rounded corners on all interactive elements */
+  button, input, select, textarea, [role="button"], 
+  [class*="btn"], [class*="button"], [class*="input"],
+  [class*="card"], [class*="container"], [class*="modal"],
+  [class*="tab"], [class*="badge"], [class*="alert"] {
+    border-radius: var(--radius) !important;
   }
   
-  @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    33% { transform: translateY(-10px) rotate(1deg); }
-    66% { transform: translateY(5px) rotate(-1deg); }
+  /* Video card consistency */
+  .video-card-divider {
+    display: flex;
+    align-items: stretch;
+    min-height: 60px; /* Ensure consistent minimum height */
+  }
+  
+  .video-card-divider > div {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  
+  /* Ensure consistent button alignment */
+  .video-card-divider button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  
+  /* Dark mode solid black background */
+  .dark,
+  html.dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 64.9%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
   }
   
   /* Custom scrollbar styling - smaller and more subtle */
@@ -209,14 +207,13 @@
   bottom: 0;
   background: hsl(var(--background));
   border-top: 1px solid hsl(var(--border) / 0.1);
-  backdrop-filter: blur(8px);
   z-index: 10;
 }
 
 /* Video card container for pagination */
 .video-list-paginated {
-  height: 225px; /* 3 cards * 75px each */
-  overflow-y: auto;
+  height: 250px; /* 3 cards * 65px each (no scrollbar needed) */
+  overflow-y: hidden; /* Remove scrollbar completely */
 }
 
 /* Hide scrollbar for video list */

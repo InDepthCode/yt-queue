@@ -213,7 +213,7 @@ function App() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 2;
+  const itemsPerPage = 3;
   const [activeDateTab, setActiveDateTab] = useState<string>('Today');
 
   const { error, setError, clearError, handleAsyncError } = useErrorHandler();
@@ -678,7 +678,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="w-[420px] h-[600px] bg-background border border-border/20 rounded-lg shadow-2xl flex flex-col overflow-hidden max-w-[420px]">
-        <div className="p-4 flex flex-col bg-gradient-to-b from-background to-muted/20 flex-1 min-h-0">
+        <div className="p-3 flex flex-col bg-gradient-to-b from-background to-muted/20 flex-1 min-h-0">
           {/* Header */}
           <Header
             theme={theme}
@@ -804,7 +804,7 @@ function App() {
 
               {/* Pagination Controls - Always at bottom */}
               {currentTabItems.length > 0 && (
-                <div className="pagination-container flex justify-center items-center py-2 border-t border-border/10 bg-gradient-to-t from-muted/20 to-background backdrop-blur-sm">
+                <div className="pagination-container flex justify-center items-center py-1 border-t border-border/10 bg-gradient-to-t from-muted/20 to-background backdrop-blur-sm">
                   <div className="flex items-center space-x-2">
                    
                     
@@ -832,9 +832,7 @@ function App() {
                 
                   </div>
                   
-                  {/* <div className="ml-4 text-xs text-muted-foreground">
-                    Page {currentPage} of {totalPages} ({processedItems.length} videos)
-                  </div> */}
+                
                 </div>
               )}
             </div>

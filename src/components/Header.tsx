@@ -14,9 +14,9 @@ export const Header: React.FC<HeaderProps> = ({
   totalVideos
 }) => {
   return (
-    <div className="flex items-center justify-between mb-8">
+    <div className="flex items-center justify-between mb-4">
       <div>
-        <h1 className="text-lg font-medium text-foreground">Queue</h1>
+        <h1 className="text-lg font-medium text-foreground">YT-Queue</h1>
         {totalVideos > 0 && (
           <p className="text-xs text-muted-foreground mt-0.5">{totalVideos} videos</p>
         )}

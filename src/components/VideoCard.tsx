@@ -97,15 +97,15 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         isDragging ? 'opacity-50' : ''
       } ${isSelected ? 'bg-primary/5' : ''} ${
         item.watched ? 'opacity-60' : ''
-      } border-b border-border/30 py-3 px-3 video-card-divider`}
+      } border-b border-border/30 py-2 px-2 video-card-divider`}
     >
-      <div className="flex items-center space-x-3">
+      <div className="flex items-start space-x-2">
         {/* Thumbnail */}
-        <div className="relative flex-shrink-0">
+        <div className="relative flex-shrink-0 mt-0.5">
           <img
             src={item.thumbnail}
             alt={item.title}
-            className="w-14 h-10 object-cover rounded"
+            className="w-10 h-7 object-cover rounded"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCA0OCAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjM2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xOCAxMkwxOCAyNEwxOCAxMloiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMzAgMTJMMzAgMjRMMzAgMTJaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==';
@@ -130,9 +130,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <h3 className={`text-sm text-foreground line-clamp-2 leading-tight ${
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-start justify-between mb-1">
+            <h3 className={`text-xs text-foreground line-clamp-2 leading-tight flex-1 mr-2 ${
               item.watched ? 'line-through opacity-60' : ''
             }`}>
               {item.title}
@@ -140,13 +140,13 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelectionChange(item.id, checked as boolean)}
-              className="h-4 w-4 ml-2"
+              className="h-3 w-3 flex-shrink-0"
             />
           </div>
           
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex flex-col space-y-1">
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col space-y-0.5">
+              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                 {formatDate(item.dateAdded) && (
                   <>
                     <span>{formatDate(item.dateAdded)}</span>
@@ -177,10 +177,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onSavePosition(item.id)}
-                  className="h-7 px-2 text-xs"
+                  className="h-6 px-1.5 text-xs flex-shrink-0"
                   title="Save current position"
                 >
-                  <Bookmark className="h-3 w-3" />
+                  <Bookmark className="h-2.5 w-2.5" />
                 </Button>
               )}
                
@@ -197,7 +197,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                     window.open(item.url, '_blank');
                   }
                 }}
-                className="h-7 px-3 text-xs"
+                className="h-6 px-2 text-xs flex-shrink-0"
               >
                 {hasSavedPosition ? 'Resume' : 'Watch'}
               </Button>
@@ -205,9 +205,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(item.id)}
-                className="h-7 px-2 text-xs hover:text-destructive"
+                className="h-6 px-1.5 text-xs hover:text-destructive flex-shrink-0"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-2.5 w-2.5" />
               </Button>
             </div>
           </div>

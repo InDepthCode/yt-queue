@@ -33,7 +33,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   const allSelected = totalItems > 0 && selectedItems.length === totalItems;
 
   return (
-    <div className="space-y-3 mb-4">
+    <div className="space-y-2 mb-3">
       {/* Search and Sort Row */}
       <div className="flex gap-2">
         <div className="relative flex-1">

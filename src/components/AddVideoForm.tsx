@@ -58,8 +58,8 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({
   };
 
   return (
-    <div className="space-y-3 mb-6">
-      <form onSubmit={handleSubmit} className="space-y-3">
+    <div className="space-y-2 mb-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex space-x-2">
           <Input
             type="url"
